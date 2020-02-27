@@ -33,8 +33,7 @@ try:
 except ImportError:
 	flags = None
 
-# If modifying these scopes, delete your previously saved credentials
-SCOPES = 'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/spreadsheets'
+
 
 def get_server_connection(server, database_name):
 	'''
@@ -72,6 +71,10 @@ def get_credentials(client_secret_file, application_name):
 	Returns:
 		Credentials, the obtained credential.
 	"""
+
+	# If modifying these scopes, delete your previously saved credentials
+	scopes = 'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/spreadsheets'
+
 	home_dir = os.path.expanduser('~')
 	credential_dir = os.path.join(home_dir, '.credentials')
 	if not os.path.exists(credential_dir):
@@ -81,7 +84,7 @@ def get_credentials(client_secret_file, application_name):
 	store = oauth2client.file.Storage(credential_path)
 	credentials = store.get()
 	if not credentials or credentials.invalid:
-		flow = client.flow_from_clientsecrets(client_secret_file, SCOPES)
+		flow = client.flow_from_clientsecrets(client_secret_file, scopes)
 		flow.user_agent = application_name
 		if flags:
 			credentials = tools.run_flow(flow, store, flags)
@@ -90,14 +93,22 @@ def get_credentials(client_secret_file, application_name):
 		print('Storing credentials to ' + credential_path)
 	return credentials
 
-credentials = get_credentials()
-http = credentials.authorize(httplib2.Http())
+def get_drive_service(credentials, service_type, version=None):
 
-# this is for Drive API
-serviceDrive = discovery.build('drive', 'v3', http=http)
+	if service_type not in ['drive', 'sheets']:
+		raise ValueError("'service_type' argument must be 'drive' or 'sheets'.")
+		exit(0)
 
-# this is for Sheets API
-serviceSheets = discovery.build('sheets', 'v4', http=http)
+	if not version:
+		if service_type == 'drive':
+			version = 'v3'
+		elif service_type == 'sheets':
+			version = 'v4'
+
+	http = credentials.authorize(httplib2.Http())
+
+	return discovery.build(service_type, version, http=http)
+
 
 def backoff_hdlr(details):
 	print("\nBacking off {wait:0.1f} seconds afters {tries} tries "
