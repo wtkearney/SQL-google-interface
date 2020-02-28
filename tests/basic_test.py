@@ -50,7 +50,7 @@ def test_file_creation_and_deletion():
 		custom_metadata={"testKey" : "testValue"})
 	print("Created spreadsheet with ID: {}".format(file_id))
 
-	file_data_from_search = interface.get_file_ids_and_names_from_drive(service=drive_service, custom_metadata={"testKey" : "testValue"})
+	file_data_from_search = interface.get_files_from_drive(service=drive_service, custom_metadata={"testKey" : "testValue"})
 	file_ids_from_search = [item['id'] for item in file_data_from_search]
 	print("File IDs from search: {}".format(file_ids_from_search))
 
