@@ -13,7 +13,6 @@ import pyodbc
 
 import pandas as pd
 import backoff # this will help avoid Quote exceeded errors when making REST requests
-import logging
 
 import httplib2
 import os
@@ -48,7 +47,7 @@ def get_server_connection(server, database_name):
 		conn_info = conn_info + 'DATABASE_NAME={};'.format(database_name) # database name goes here
 		conn_info = conn_info + 'Trusted_Connection=yes' # use windows authentication
 		cnn = pyodbc.connect(conn_info)
-		print("Connected with SQL Server Native Client 10.0.\n")
+		print("Connected with SQL Server Native Client 10.0.")
 	except pyodbc.Error as e1:
 		try:
 			conn_info = 'DRIVER=SQL Server Native Client 11.0;' # ms sql server2012
@@ -56,13 +55,13 @@ def get_server_connection(server, database_name):
 			conn_info = conn_info + 'DATABASE_NAME={};'.format(database_name) # database name goes here
 			conn_info = conn_info + 'Trusted_Connection=yes' # use windows authentication
 			cnn = pyodbc.connect(conn_info)
-			print("Connected with SQL Server Native Client 11.0.\n")
+			print("Connected with SQL Server Native Client 11.0.")
 		except pyodbc.Error as e2:
 			print("Error: {}".format(e2))
 
 	return cnn
 
-def get_credentials(client_secret_file, application_name):
+def get_credentials(client_secret_file=None, application_name="SQL-google-interface", stored_credentials_dir="C:/credentials/"):
 	"""Gets valid user credentials from storage.
 
 	If nothing has been stored, or if the stored credentials are invalid,
@@ -75,11 +74,9 @@ def get_credentials(client_secret_file, application_name):
 	# If modifying these scopes, delete your previously saved credentials
 	scopes = 'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/spreadsheets'
 
-	home_dir = os.path.expanduser('~')
-	credential_dir = os.path.join(home_dir, '.credentials')
-	if not os.path.exists(credential_dir):
-		os.makedirs(credential_dir)
-	credential_path = os.path.join(credential_dir, 'drive-python.json')
+	if not os.path.exists(stored_credentials_dir):
+		os.makedirs(stored_credentials_dir)
+	credential_path = os.path.join(stored_credentials_dir, 'sql-drive-interface-credentials.json')
 	# print(credential_path)
 	store = oauth2client.file.Storage(credential_path)
 	credentials = store.get()
