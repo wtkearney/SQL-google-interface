@@ -11,7 +11,7 @@ from sql_google_interface import interface
 # the first time you are using this application, specify where your client secret file is
 # subsequently, it is automatically stored and accessed so you can delete the client secret
 client_secret_file = "C:/client_secret.json"
-connection_data = "C:/connection_data/PPS_server_connection_data.txt"
+connection_data = "C:/connection_data/server_connection_data.txt"
 
 def test_server_connection():
 
@@ -46,7 +46,7 @@ def test_file_creation_and_deletion():
 
 	file_id = interface.create_spreadsheet(service=drive_service,
 		spreadsheet_name="test spreadsheet",
-		parent_folder_list=['1dtIlqofnvtXxEhTtNN_mu2yRKuw6Hjxq'],
+		# parent_folder_list=['1dtIlqofnvtXxEhTtNN_mu2yRKuw6Hjxq'],
 		custom_metadata={"testKey" : "testValue"})
 	print("Created spreadsheet with ID: {}".format(file_id))
 
