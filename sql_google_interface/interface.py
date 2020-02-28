@@ -32,7 +32,33 @@ try:
 except ImportError:
 	flags = None
 
+def read_connection_data_from_external_file(filepath, separator="="):
+	"""
 
+	"""
+	with open(filepath, 'r') as f:
+		connection_data = f.readlines()
+
+	connection_data_dict = dict()
+
+	# clean strings and split on delimiter
+	for entry in connection_data:
+		entry_cleaned = entry.replace(" ", "").strip("\n") # strip whitespace and trailing new lines
+		split_string = entry_cleaned.split(separator)
+		connection_data_dict[ split_string[0] ] = split_string[1]
+	
+	if "server" not in connection_data_dict or "database" not in connection_data_dict:
+		raise ValueError(
+			"""Connection data file must contain server and database_name, formated like:
+			server = server_name
+			database = database_name\n""")
+		exit(0)
+
+	server = connection_data_dict["server"]
+	database = connection_data_dict["database"]
+	print("Server={}\nDatabase={}".format(server, database))
+
+	return server, database
 
 def get_server_connection(server, database_name):
 	'''
