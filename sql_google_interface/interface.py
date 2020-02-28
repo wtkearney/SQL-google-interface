@@ -143,7 +143,51 @@ def get_data_from_server(server, SQL_filepath):
 
 
 @backoff.on_exception(backoff.expo, HttpError, on_backoff=backoff_hdlr)
-def create_spreadsheet(spreadsheet_name, parent_folder_list, canShare='false', custom_metadata=None,):
+def get_file_ids_and_names_from_drive(service, name=None, mime_type=None, custom_metadata=None, parent_id=None, trashed=False, result_fields=["name", "id"]):
+	"""
+
+	"""
+	query_list = []
+	if name:
+		query_list.append("name = '{}'".format(name))
+
+	if mime_type:
+		if mime_type == "folder":
+			query_list.append("mimeType = 'application/vnd.google-apps.folder'")
+		elif mime_type == "file":
+			query_list.append("mimeType = 'application/vnd.google-apps.file")
+		else:
+			raise ValueError("'mime_type' argument must be 'folder' or 'file'.")
+			exit(0)
+
+	if custom_metadata:
+		for key, value in custom_metadata.items():
+			q = "properties has {key='" + key + "' and value='" + value + "'}"
+			query_list.append(q)
+
+	if parent_id:
+		query_list.append("'{}' in parents".format(parent_id))
+
+	if trashed == False:
+		query_list.append("trashed = false")
+	elif trashed == True:
+		query_list.append("trashed = true")
+	
+
+	q = query_list[0]
+	for criterion in query_list[1:]:
+		q = q + "and " + criterion
+	
+	result_fields_string = ','.join(result_fields)
+	results = service.files().list(q=q,
+		spaces='drive',
+		fields='nextPageToken, files({})'.format(result_fields_string)).execute()
+
+	return results.get('files', [])
+
+
+@backoff.on_exception(backoff.expo, HttpError, on_backoff=backoff_hdlr)
+def create_spreadsheet(service, spreadsheet_name, parent_folder_list, canShare='false', custom_metadata=None):
 	"""
 
 	"""
@@ -158,12 +202,22 @@ def create_spreadsheet(spreadsheet_name, parent_folder_list, canShare='false', c
 	}
 
 	if custom_metadata:
-		for key, value in custom_metadata:
+		for key, value in custom_metadata.items():
 			body['properties'][key] = value
 
 	# create spreadsheet, get file id (for permissions)
 	# print("\tCreating spreadsheet: {}".format(spreadsheet_name))
-	file = serviceDrive.files().create(body=body, fields='id').execute()
+	file = service.files().create(body=body, fields='id').execute()
 	sheet_id = file.get('id')
 
 	return sheet_id
+
+@backoff.on_exception(backoff.expo, HttpError, on_backoff=backoff_hdlr)
+def delete_drive_files_by_ID(service, list_of_file_ids):
+
+	batch = service.new_batch_http_request(callback=batch_request_callback)
+	for fileID in list_of_file_ids:
+		#print('File ID: %s' % file.get('name'))
+		batch.add(service.files().delete(fileId=fileID))	
+
+	batch.execute()
