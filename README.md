@@ -3,7 +3,7 @@
 This project provides an easy set of tools to transfer data between a SQL database and Google Drive. It was developed at Portland Public Schools (PPS) in Portland, OR to help administrators and analysts programatically share sensitive data with schools. For example, this interface allows analysts to create simple python scripts that pull data from an internal database and populate individual school folders on the Google Drive. Users can format spreadsheets, upload graphs, change permissions, and so forth.
 
 The advantage of using Google Drive to communicate with schools is:
-1. School principals, secretaries, and administratos are familiar with Google Drive
+1. School principals, secretaries, and administrators are familiar with Google Drive
 2. School districts frequently already have security contracts in place with Google
 
 ## Getting Started
@@ -71,7 +71,14 @@ google-api-python-client
 
 This repository comes with some basic tests to make sure your server connections and Google credentials are working appropriately.
 
-Download ```./tests/basic_test.py```, ```cd``` into the appropriate directory, and run it. The first time you connect to Google, you'll need to authorize your credentials by following the OAuth authorization flow.
+Download ```./tests/basic_test.py```. Make sure the script contains the correct paths to your ```client_secret.json``` and ```server_connection_data.txt``` files.
+
+```
+client_secret_file = "C:/client_secret.json"
+connection_data = "C:/connection_data/server_connection_data.txt"
+```
+
+Next, ```cd``` into the appropriate directory and run the ```basic_test.py``` file. (The first time this is run, you'll need to authorize your credentials by following the OAuth authorization flow. This only happens once, after which you can delete your ```client_secret.json``` file.)
 
 ## Built With
 
