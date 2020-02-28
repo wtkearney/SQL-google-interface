@@ -371,3 +371,39 @@ def format_spreadsheet(sheet_service, sheet_id):
 	sheet_service.spreadsheets().batchUpdate(spreadsheetId=sheet_id, body=batchUpdateRequest).execute()
 	
 	return sheet_id
+
+@backoff.on_exception(backoff.expo, HttpError, on_backoff=backoff_hdlr)
+def populate_spreadsheet_from_df(sheets_service, sheet_id, dataframe):
+	"""Populates a spreadsheet with data from a pandas dataframe
+
+	Arguments:
+		sheets_service -- a Google Sheets service
+		sheet_id -- the ID of the sheet to populate
+		dataframe -- athe pandas dataframe containing the data
+	Returns:
+		The sheet ID of the spreadsheet
+	"""
+	dataframe_cleaned = dataframe.values.tolist()
+
+	# do lots of type checking -- there's probably a better (faster) way to do this, but it works for now
+	for row in dataframe_cleaned:
+		for idx in range(len(row)):
+			if type(row[idx]) is str:
+				continue
+			elif type(row[idx]) is int or type(row[idx]) is float:
+				row[idx] = str(row[idx])
+			elif row[idx] == None or row[idx] == "NULL":
+				row[idx] = ""
+			elif type(row[idx]) is datetime.date:
+				row[idx] = row[idx].isoformat()
+			else:
+				# print("Type error")
+				row[idx] = "TYPE_ERROR"
+	
+	# write data to spreadsheet
+	dataframe_cleaned.insert(0, list(dataframe.columns.values))
+	data_json = {'values': dataframe_cleaned}
+
+	sheets_service.spreadsheets().values().update(spreadsheetId=sheet_id, range='A1', body=data_json, valueInputOption='RAW').execute()
+
+	return sheet_id
