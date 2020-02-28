@@ -33,8 +33,17 @@ except ImportError:
 	flags = None
 
 def read_connection_data_from_external_file(filepath, separator="="):
-	"""
+	"""Reads SQL server connection information from an external file.
+	Keeping this information external is potentially important for security reasons.
+	The format of this file should be:
+		server = [server_name]
+		database = [database_name]
 
+	Arguments:
+		filepath -- the location of the connection file (e.g. "C:/connection_data/server_connection_data.txt")
+		separator -- the delimiter (default "=")
+	Returns:
+		The server, database as strings
 	"""
 	with open(filepath, 'r') as f:
 		connection_data = f.readlines()
@@ -61,10 +70,15 @@ def read_connection_data_from_external_file(filepath, separator="="):
 	return server, database
 
 def get_server_connection(server, database_name):
-	'''
-	Tries to connect to the SQL database. Attempts connection
-	with driver SQL Server Native Client 10.0 and 11.0. Returns cursor.
-	'''
+	"""Tries to connect to the SQL database.
+	Attempts connection with driver SQL Server Native Client 10.0 and 11.0.
+
+	Arguments:
+		server -- the name of the server
+		database_name -- the name of the database
+	Returns:
+		The connection object
+	"""
 	cnn = False
 	try:
 		# make connection to GIS database
@@ -93,6 +107,11 @@ def get_credentials(client_secret_file=None, application_name="SQL-google-interf
 	If nothing has been stored, or if the stored credentials are invalid,
 	the OAuth2 flow is completed to obtain the new credentials.
 
+	Arguments:
+		client_secret_file -- location of the client secret file. (e.g. "C:/client_secret.json")
+			This only needs to be specified the first time the application is run.
+		application_name -- the name of the application (default "SQL-google-interface")
+		stored_credentials_dir -- the location where credentials will be stored (default "C:/credentials/") 
 	Returns:
 		Credentials, the obtained credential.
 	"""
@@ -117,6 +136,15 @@ def get_credentials(client_secret_file=None, application_name="SQL-google-interf
 	return credentials
 
 def get_drive_service(credentials, service_type, version=None):
+	"""Retrieves the service used for making requests to
+
+	Arguments:
+		credentials -- Google API credentials
+		service_type -- either "drive" or "sheets"
+		version -- the version you are using (default None; this is automatically set depending on the service_type)
+	Returns:
+		The requested service
+	"""
 
 	if service_type not in ['drive', 'sheets']:
 		raise ValueError("'service_type' argument must be 'drive' or 'sheets'.")
@@ -134,22 +162,28 @@ def get_drive_service(credentials, service_type, version=None):
 
 
 def backoff_hdlr(details):
+	"""This is called when a function is backed off."""
 	print("\nBacking off {wait:0.1f} seconds afters {tries} tries "
 		"calling function {target}\n".format(**details))
 
 def batch_request_callback(request_id, response, exception):
+	"""Callback funnction for batch requests."""
 	if exception is not None:
 	# Do something with the exception
 		print("There was an error: {}".format(exception))
 	else:
 		pass
 
-def get_data_from_server(server, SQL_filepath):
+def get_data_from_server(server_connection, SQL_filepath):
+	"""Gets data from a SQL server in the form of a pandas dataframe
 
-	# get server connection to WNDWPRDDB
-	cnn = get_server_connection(server=server)
-
-	if not cnn:
+	Arguments:
+		server_connection -- the connection to the server
+		SQL_filepath -- filepath to a SQL query
+	Returns:
+		A pandas dataframe containing the requested data
+	"""
+	if not server_connection:
 		print("Error: {} server connection does not exist.".format(server))
 		return False
 
@@ -158,17 +192,23 @@ def get_data_from_server(server, SQL_filepath):
 		query = f.read()
 
 	print("Retrieving data from SQL server... ")
-	dataframe = pd.read_sql(query, cnn)
-
-	cnn.close() # close connection
+	dataframe = pd.read_sql(query, server_connection)
 
 	return dataframe
 
 
 @backoff.on_exception(backoff.expo, HttpError, on_backoff=backoff_hdlr)
-def get_file_ids_and_names_from_drive(service, name=None, mime_type=None, custom_metadata=None, parent_id=None, trashed=False, result_fields=["name", "id"]):
-	"""
+def get_files_from_drive(service, name=None, mime_type=None, custom_metadata=None, parent_id=None, trashed=False, result_fields=["name", "id"]):
+	"""Gets files from Google Drive based on various search criteria
 
+	Arguments:
+		name -- name of file(s) being searched for (default None)
+		mime_type -- MIME type of file(s) being searched for, e.g. 'application/vnd.google-apps.folder' (default None)
+		parent_id -- the ID of the parent folder for the file(s) being searched for (default None)
+		trashed -- whether or not the file being searched for is trashed (default False)
+		result_fields -- specifies what data is returns (default ["name", "id"])
+	Returns:
+		A dictionary containing the requested fields of the files found using the specified search criteria
 	"""
 	query_list = []
 	if name:
@@ -210,9 +250,18 @@ def get_file_ids_and_names_from_drive(service, name=None, mime_type=None, custom
 
 
 @backoff.on_exception(backoff.expo, HttpError, on_backoff=backoff_hdlr)
-def create_spreadsheet(service, spreadsheet_name, parent_folder_list, canShare='false', custom_metadata=None):
-	"""
+def create_spreadsheet(service, spreadsheet_name, parent_folder_list, can_share='false', custom_metadata=None):
+	"""Creates a spreadsheet.
 
+	Arguments:
+		service -- a Google Drive service
+		spreadsheet_name -- the name of the spreadsheet
+		parent_folder_list -- a list of parent IDs
+		can_share -- indicates whether users can share this file with others (default 'false')
+		custom_metadata -- a dictionary of key value pairs that allows you to create custom metadata. This might
+			make it easy to search for these files later, for example.
+	Returns:
+		The sheet ID of the new spreadsheet
 	"""
 	# metadata for new spreadsheet
 	body = {
@@ -220,7 +269,7 @@ def create_spreadsheet(service, spreadsheet_name, parent_folder_list, canShare='
 		'parents' : parent_folder_list,
 		'mimeType': 'application/vnd.google-apps.spreadsheet',
 		'copyRequiresWriterPermission' : 'false',	# changed from 'viewersCanCopyContent', which is now deprecated
-		'capabilities.canShare' : canShare,			# indicate whether users can share this file with others
+		'capabilities.canShare' : can_share,			# indicate whether users can share this file with others
 		'properties' : {}
 	}
 
@@ -237,6 +286,12 @@ def create_spreadsheet(service, spreadsheet_name, parent_folder_list, canShare='
 
 @backoff.on_exception(backoff.expo, HttpError, on_backoff=backoff_hdlr)
 def delete_drive_files_by_ID(service, list_of_file_ids):
+	"""Batch deletes files from a list of file IDs.
+
+	Arguments:
+		service -- a Google Drive service
+		list_of_file_ids -- a list of file IDs to delete
+	"""
 
 	batch = service.new_batch_http_request(callback=batch_request_callback)
 	for fileID in list_of_file_ids:
