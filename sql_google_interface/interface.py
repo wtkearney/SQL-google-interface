@@ -198,10 +198,11 @@ def get_data_from_server(server_connection, SQL_filepath):
 
 
 @backoff.on_exception(backoff.expo, HttpError, on_backoff=backoff_hdlr)
-def get_files_from_drive(service, name=None, mime_type=None, custom_metadata=None, parent_id=None, trashed=False, result_fields=["name", "id"]):
+def get_files_from_drive(drive_service, name=None, mime_type=None, custom_metadata=None, parent_id=None, trashed=False, result_fields=["name", "id"]):
 	"""Gets files from Google Drive based on various search criteria
 
 	Arguments:
+		drive_service -- a Google Drive service
 		name -- name of file(s) being searched for (default None)
 		mime_type -- MIME type of file(s) being searched for, e.g. 'application/vnd.google-apps.folder' (default None)
 		parent_id -- the ID of the parent folder for the file(s) being searched for (default None)
@@ -242,7 +243,7 @@ def get_files_from_drive(service, name=None, mime_type=None, custom_metadata=Non
 		q = q + "and " + criterion
 	
 	result_fields_string = ','.join(result_fields)
-	results = service.files().list(q=q,
+	results = drive_service.files().list(q=q,
 		spaces='drive',
 		fields='nextPageToken, files({})'.format(result_fields_string)).execute()
 
@@ -250,11 +251,11 @@ def get_files_from_drive(service, name=None, mime_type=None, custom_metadata=Non
 
 
 @backoff.on_exception(backoff.expo, HttpError, on_backoff=backoff_hdlr)
-def create_spreadsheet(service, spreadsheet_name, parent_folder_list, can_share='false', custom_metadata=None):
+def create_spreadsheet(drive_service, spreadsheet_name, parent_folder_list=None, can_share='false', custom_metadata=None):
 	"""Creates a spreadsheet.
 
 	Arguments:
-		service -- a Google Drive service
+		drive_service -- a Google Drive service
 		spreadsheet_name -- the name of the spreadsheet
 		parent_folder_list -- a list of parent IDs
 		can_share -- indicates whether users can share this file with others (default 'false')
@@ -266,12 +267,14 @@ def create_spreadsheet(service, spreadsheet_name, parent_folder_list, can_share=
 	# metadata for new spreadsheet
 	body = {
 		'name': spreadsheet_name,
-		'parents' : parent_folder_list,
 		'mimeType': 'application/vnd.google-apps.spreadsheet',
 		'copyRequiresWriterPermission' : 'false',	# changed from 'viewersCanCopyContent', which is now deprecated
 		'capabilities.canShare' : can_share,			# indicate whether users can share this file with others
 		'properties' : {}
 	}
+
+	if parent_folder_list:
+		body['parents'] = parent_folder_list
 
 	if custom_metadata:
 		for key, value in custom_metadata.items():
@@ -279,23 +282,92 @@ def create_spreadsheet(service, spreadsheet_name, parent_folder_list, can_share=
 
 	# create spreadsheet, get file id (for permissions)
 	# print("\tCreating spreadsheet: {}".format(spreadsheet_name))
-	file = service.files().create(body=body, fields='id').execute()
+	file = drive_service.files().create(body=body, fields='id').execute()
 	sheet_id = file.get('id')
 
 	return sheet_id
 
 @backoff.on_exception(backoff.expo, HttpError, on_backoff=backoff_hdlr)
-def delete_drive_files_by_ID(service, list_of_file_ids):
+def delete_drive_files_by_ID(drive_service, list_of_file_ids):
 	"""Batch deletes files from a list of file IDs.
 
 	Arguments:
-		service -- a Google Drive service
+		drive_service -- a Google Drive service
 		list_of_file_ids -- a list of file IDs to delete
 	"""
 
-	batch = service.new_batch_http_request(callback=batch_request_callback)
+	batch = drive_service.new_batch_http_request(callback=batch_request_callback)
 	for fileID in list_of_file_ids:
 		#print('File ID: %s' % file.get('name'))
-		batch.add(service.files().delete(fileId=fileID))	
+		batch.add(drive_service.files().delete(fileId=fileID))	
 
 	batch.execute()
+
+@backoff.on_exception(backoff.expo, HttpError, on_backoff=backoff_hdlr)
+def format_spreadsheet(sheet_service, sheet_id):
+	"""Format's a spreadsheet for easier data reading (e.g. freezes top tow, makes header bold, wraps text)
+
+
+	Arguments:
+		sheet_service -- a Google sheets service
+		sheed_id -- the ID of the sheet to be formatted
+	"""
+
+	requests = []
+
+	# always format header row
+	requests.append({
+	  "repeatCell": {
+		"range": {
+		  "sheetId": 0,
+		  "startRowIndex": 0,
+		  "endRowIndex": 1
+		},
+		"cell": {
+		  "userEnteredFormat": {
+			"textFormat": {
+			  "bold": True
+			}
+		  }
+		},
+		"fields": "userEnteredFormat(textFormat)"
+	  }
+	})
+
+	# freeze the top row
+	requests.append({
+	  "updateSheetProperties": {
+		"properties": {
+		  "sheetId": 0,
+		  "gridProperties": {
+			"frozenRowCount": 1
+		  }
+		},
+		"fields": "gridProperties.frozenRowCount"
+	  }
+	})
+
+	# # wrap text
+	requests.append({
+	  "repeatCell": {
+		"range": {
+		  "sheetId": 0,
+		  "startRowIndex": 1,
+		  "endRowIndex": 500,
+		  "startColumnIndex": 0,
+		  "endColumnIndex": 27
+		},
+		"cell": {
+		  "userEnteredFormat": {
+			"wrapStrategy": "WRAP"
+		  }
+		},
+		"fields": "userEnteredFormat.wrapStrategy"
+	  }
+	})
+
+	batchUpdateRequest = {'requests': requests}
+	
+	sheet_service.spreadsheets().batchUpdate(spreadsheetId=sheet_id, body=batchUpdateRequest).execute()
+	
+	return sheet_id

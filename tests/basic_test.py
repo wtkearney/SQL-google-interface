@@ -44,18 +44,18 @@ def test_file_creation_and_deletion():
 
 	drive_service = interface.get_drive_service(credentials=credentials, service_type='drive')
 
-	file_id = interface.create_spreadsheet(service=drive_service,
+	file_id = interface.create_spreadsheet(drive_service=drive_service,
 		spreadsheet_name="test spreadsheet",
 		# parent_folder_list=['1dtIlqofnvtXxEhTtNN_mu2yRKuw6Hjxq'],
 		custom_metadata={"testKey" : "testValue"})
 	print("Created spreadsheet with ID: {}".format(file_id))
 
-	file_data_from_search = interface.get_files_from_drive(service=drive_service, custom_metadata={"testKey" : "testValue"})
+	file_data_from_search = interface.get_files_from_drive(drive_service=drive_service, custom_metadata={"testKey" : "testValue"})
 	file_ids_from_search = [item['id'] for item in file_data_from_search]
 	print("File IDs from search: {}".format(file_ids_from_search))
 
 	print("Deleting files...")
-	interface.delete_drive_files_by_ID(service=drive_service, list_of_file_ids=file_ids_from_search)
+	interface.delete_drive_files_by_ID(drive_service=drive_service, list_of_file_ids=file_ids_from_search)
 
 	print("Done!\n")
 
