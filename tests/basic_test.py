@@ -6,6 +6,8 @@ DOCSTRING
 
 """
 
+import random
+
 from sql_google_interface import interface
 
 # the first time you are using this application, specify where your client secret file is
@@ -44,13 +46,17 @@ def test_file_creation_and_deletion():
 
 	drive_service = interface.get_drive_service(credentials=credentials, service_type='drive')
 
+	random_spreadsheet_name = "Random File Name {}".format(random.randint(1,100000))
 	file_id = interface.create_spreadsheet(drive_service=drive_service,
-		spreadsheet_name="test spreadsheet",
-		# parent_folder_list=['1dtIlqofnvtXxEhTtNN_mu2yRKuw6Hjxq'],
+		spreadsheet_name=random_spreadsheet_name,
+		parent_folder_list=['1dtIlqofnvtXxEhTtNN_mu2yRKuw6Hjxq'],
 		custom_metadata={"testKey" : "testValue"})
 	print("Created spreadsheet with ID: {}".format(file_id))
 
-	file_data_from_search = interface.get_files_from_drive(drive_service=drive_service, custom_metadata={"testKey" : "testValue"})
+	file_data_from_search = interface.get_files_from_drive(drive_service=drive_service,
+		substring_name=random_spreadsheet_name,
+		parent_id='1dtIlqofnvtXxEhTtNN_mu2yRKuw6Hjxq',
+		custom_metadata={"testKey" : "testValue"})
 	file_ids_from_search = [item['id'] for item in file_data_from_search]
 	print("File IDs from search: {}".format(file_ids_from_search))
 
@@ -59,10 +65,11 @@ def test_file_creation_and_deletion():
 
 	print("Done!\n")
 
+
 def main():
 
-	test_server_connection()
-	test_credentials()
+	# test_server_connection()
+	# test_credentials()
 	test_file_creation_and_deletion()
 
 	
