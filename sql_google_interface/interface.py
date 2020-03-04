@@ -198,7 +198,7 @@ def get_data_from_server(server_connection, SQL_filepath):
 
 
 @backoff.on_exception(backoff.expo, HttpError, on_backoff=backoff_hdlr)
-def get_files_from_drive(drive_service, name=None, mime_type=None, custom_metadata=None, parent_id=None, trashed=False, result_fields=["name", "id"]):
+def get_files_from_drive(drive_service, name=None, substring_name=None, mime_type=None, custom_metadata=None, parent_id=None, trashed=False, result_fields=["name", "id"]):
 	"""Gets files from Google Drive based on various search criteria
 
 	Arguments:
@@ -214,6 +214,9 @@ def get_files_from_drive(drive_service, name=None, mime_type=None, custom_metada
 	query_list = []
 	if name:
 		query_list.append("name = '{}'".format(name))
+
+	if substring_name:
+		query_list.append("name contains '{}'".format(substring_name))
 
 	if mime_type:
 		if mime_type == "folder":
@@ -240,8 +243,8 @@ def get_files_from_drive(drive_service, name=None, mime_type=None, custom_metada
 
 	q = query_list[0]
 	for criterion in query_list[1:]:
-		q = q + "and " + criterion
-	
+		q = q + " and " + criterion
+
 	result_fields_string = ','.join(result_fields)
 	results = drive_service.files().list(q=q,
 		spaces='drive',
@@ -407,3 +410,21 @@ def populate_spreadsheet_from_df(sheets_service, sheet_id, dataframe):
 	sheets_service.spreadsheets().values().update(spreadsheetId=sheet_id, range='A1', body=data_json, valueInputOption='RAW').execute()
 
 	return sheet_id
+
+
+
+@backoff.on_exception(backoff.expo, HttpError, on_backoff=backoff_hdlr)
+def insert_file_into_folder(drive_service, folder_id, file_id):
+	"""Insert a file into a folder.
+	Args:
+		folder_id: ID of the folder to insert the file into.
+		file_id: ID of the file to insert.
+	"""
+	drive_service.files().update(fileId=file_id, addParents=folder_id, fields='id, parents').execute()
+
+
+def main():
+	pass
+
+if __name__ == '__main__':
+	main()
