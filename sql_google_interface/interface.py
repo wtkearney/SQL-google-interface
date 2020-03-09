@@ -307,13 +307,14 @@ def delete_drive_files_by_ID(drive_service, list_of_file_ids):
 	batch.execute()
 
 @backoff.on_exception(backoff.expo, HttpError, on_backoff=backoff_hdlr)
-def format_spreadsheet(sheet_service, sheet_id):
+def format_spreadsheet(sheet_service, sheet_id, wrap_strategy=None):
 	"""Format's a spreadsheet for easier data reading (e.g. freezes top tow, makes header bold, wraps text)
 
 
 	Arguments:
 		sheet_service -- a Google sheets service
 		sheed_id -- the ID of the sheet to be formatted
+		wrap_strategy -- the wrap strategy used. See: https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets/cells#wrapstrategy
 	"""
 
 	requests = []
@@ -351,23 +352,25 @@ def format_spreadsheet(sheet_service, sheet_id):
 	})
 
 	# # wrap text
-	requests.append({
-	  "repeatCell": {
-		"range": {
-		  "sheetId": 0,
-		  "startRowIndex": 1,
-		  "endRowIndex": 500,
-		  "startColumnIndex": 0,
-		  "endColumnIndex": 27
-		},
-		"cell": {
-		  "userEnteredFormat": {
-			"wrapStrategy": "WRAP"
+	if wrap_strategy:
+
+		requests.append({
+		  "repeatCell": {
+			"range": {
+			  "sheetId": 0,
+			  "startRowIndex": 1,
+			  "endRowIndex": 500,
+			  "startColumnIndex": 0,
+			  "endColumnIndex": 27
+			},
+			"cell": {
+			  "userEnteredFormat": {
+				"wrapStrategy": wrap_strategy
+			  }
+			},
+			"fields": "userEnteredFormat.wrapStrategy"
 		  }
-		},
-		"fields": "userEnteredFormat.wrapStrategy"
-	  }
-	})
+		})
 
 	batchUpdateRequest = {'requests': requests}
 	
