@@ -252,6 +252,13 @@ def get_files_from_drive(drive_service, name=None, substring_name=None, mime_typ
 
 	return results.get('files', [])
 
+def create_permissions(drive_service, file_id):
+	"""
+
+	"""
+
+	pass
+
 
 @backoff.on_exception(backoff.expo, HttpError, on_backoff=backoff_hdlr)
 def create_spreadsheet(drive_service, spreadsheet_name, parent_folder_list=None, can_share='false', custom_metadata=None):
