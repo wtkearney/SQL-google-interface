@@ -12,11 +12,13 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/wtkearney/SQL-google-interface",
+    download_url = 'https://github.com/wtkearney/SQL-google-interface/archive/v1.1.tar.gz',
     install_requires=[
         "pyodbc",
         "pandas",
         "backoff",
-        "google-api-python-client"],
+        "google-api-python-client",
+        "oauth2client"],
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
@@ -25,3 +27,4 @@ setuptools.setup(
     ],
     python_requires='>=3.6',
 )
+
