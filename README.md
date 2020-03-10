@@ -80,6 +80,59 @@ connection_data = "C:/connection_data/server_connection_data.txt"
 
 Next, ```cd``` into the appropriate directory and run the ```basic_test.py``` file. (The first time this is run, you'll need to authorize your credentials by following the OAuth authorization flow. This only happens once, after which you can delete your ```client_secret.json``` file.)
 
+## Usage example
+
+Here is a short example script that takes data from a SQL database and uploads it into a google sheet. If it has already been run today, it deletes the current spreadsheet and creates a new one. Notice how custom metadata is used to identify files.
+
+```
+from datetime import date
+from sql_google_interface import interface
+
+server = <your-server-name>
+database_name = <your-database-name>
+parent_folder_id = <parent-folder-id>
+SQL_filepath = "./data.sql"
+client_secret_file = "C:/client_secret.json"
+
+# get the connection to the SQL server and get data
+cnn = interface.get_server_connection(server, database_name)
+dataframe = interface.get_data_from_server(cnn, SQL_filepath)
+cnn.close()
+
+# get credentials for uploading data
+credentials = interface.get_credentials(client_secret_file)
+
+# create a drive and sheets service to interact with Google
+drive_service = interface.get_drive_service(credentials=credentials, service_type='drive')
+sheets_service = interface.get_drive_service(credentials=credentials, service_type='sheets')
+
+# Create filename using month abbreviation, day, and year
+today = date.today().strftime("%b-%d-%Y")
+data_filename = "Data run {}".format(today)
+
+# search to see if a file has already been uploaded today; if so delete it
+file_data_from_search = interface.get_files_from_drive(drive_service=drive_service,
+	parent_id=parent_folder_id,
+	custom_metadata={"data-date" : today})
+
+file_ids_from_search = [item['id'] for item in file_data_from_search]
+if file_ids_from_search:
+	print("There has already been a file created today. I will overwrite it with new data.")
+	interface.delete_drive_files_by_ID(drive_service=drive_service, list_of_file_ids=file_ids_from_search)
+
+sheet_id = interface.create_spreadsheet(drive_service=drive_service,
+	spreadsheet_name=data_filename,
+	parent_folder_list=[parent_folder_id],
+	custom_metadata={"data-date" : today})
+print("Created spreadsheet with id {}".format(sheet_id))
+
+# upload data to the spreadsheet
+interface.populate_spreadsheet_from_df(sheets_service, sheet_id, dataframe)
+
+# format the spreadhseet
+interface.format_spreadsheet(sheets_service, sheet_id, wrap_strategy="WRAP")
+```
+
 ## Built With
 
 * [Google Drive API](https://developers.google.com/drive) - The API used to communicate with Google Drive
