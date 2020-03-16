@@ -194,7 +194,52 @@ def get_data_from_server(server_connection, SQL_filepath):
 	print("Retrieving data from SQL server... ")
 	dataframe = pd.read_sql(query, server_connection)
 
+	for col in dataframe:
+		if dataframe[col].dtype == "datetime64[ns]":
+			dataframe[col] = dataframe[col].apply(lambda x: x.strftime('%Y-%m-%d') if not pd.isnull(x) else '')
+	
+	# replace NaN and NaT with empty strings
+	dataframe.fillna('', inplace=True)
+
 	return dataframe
+
+def clean_dataframe(dataframe):
+	"""Type checks data in a pandas dataframe
+
+	Arguments:
+		dataframe -- the dataframe to be cleaned
+	Returns:
+		A pandas dataframe containing the cleaned data
+	"""
+
+	data_as_list = dataframe.values.tolist()
+
+	# do lots of type checking -- there's probably a better (faster) way to do this, but it works for now
+	for row in data_as_list:
+		for idx in range(len(row)):
+			if type(row[idx]) is long or type(row[idx]) is float or type(row[idx]) is int:
+				row[idx] = str(row[idx])
+			elif row[idx] == None or row[idx] == "NULL":
+				row[idx] = ""
+			elif isinstance(row[idx], str):
+				# row[idx] is ordinary string
+				row[idx] = unicode(row[idx], "utf-8")
+			elif isinstance(row[idx], unicode):
+				pass
+			elif type(row[idx]) is pd.tslib.Timestamp:
+				row[idx] = row[idx].strftime('%d-%m-%Y')
+			elif type(row[idx]) is datetime.date:
+				row[idx] = row[idx].strftime('%d-%m-%Y')
+			else:
+				print("Type error")
+				row[idx] = "TYPE_ERROR"
+
+	# write data to spreadsheet
+	school_specific_data.insert(0, list(data.columns.values))
+	data_json = {'values': school_specific_data}
+
+
+	return
 
 
 @backoff.on_exception(backoff.expo, HttpError, on_backoff=backoff_hdlr)
