@@ -6,63 +6,77 @@ DOCSTRING
 
 """
 
-import time
-import datetime
 
-import pyodbc
-
-import pandas as pd
 import backoff # this will help avoid Quote exceeded errors when making REST requests
-
+import datetime
 import httplib2
+import json
 import numpy as np
+import oauth2client
 import os
+import pandas as pd
+import pyodbc
 import sys
-
+import time
 from apiclient import discovery
 from apiclient.http import MediaFileUpload
-import oauth2client
+from googleapiclient.errors import HttpError
 from oauth2client import client
 from oauth2client import tools
 from oauth2client import file
-from googleapiclient.errors import HttpError
 
 
 def read_connection_data_from_external_file(filepath, separator="="):
 	"""Reads SQL server connection information from an external file.
-	Keeping this information external is potentially important for security reasons.
+	Keeping this information external is potentially important for security
+	reasons.
+
+	Currently this method is capable of utilizing .txt and .json file types.
+	Other file types can be added as needed by the end users.
+
 	The format of this file should be:
 		server = [server_name]
 		database = [database_name]
 
 	Arguments:
-		filepath -- the location of the connection file (e.g. "C:/connection_data/server_connection_data.txt")
+		filepath -- the location of the connection file (e.g. "C:/
+			connection_data/server_connection_data.txt")
 		separator -- the delimiter (default "=")
 	Returns:
 		The server, database as strings
 	"""
-	with open(filepath, 'r') as f:
-		connection_data = f.readlines()
-		f.close()
+	if filepath.endswith(".txt"):
+		with open(filepath, 'r') as f:
+			connection_data = f.readlines()
+			f.close()
 
-	connection_data_dict = dict()
+		connection_data_dict = dict()
 
-	# clean strings and split on delimiter
-	for entry in connection_data:
-		entry_cleaned = entry.replace(" ", "").strip("\n") # strip whitespace and trailing new lines
-		split_string = entry_cleaned.split(separator)
-		connection_data_dict[ split_string[0] ] = split_string[1]
+		# clean strings and split on delimiter
+		for entry in connection_data:
+			# strip whitespace and trailing new lines
+			entry_cleaned = entry.replace(" ", "").strip("\n")
+			split_string = entry_cleaned.split(separator)
+			connection_data_dict[ split_string[0] ] = split_string[1]
+	elif filepath.endswith(".json"):
+		with open(filepath, "r") as f:
+			connection_data_dict = json.load(f)
+			f.close()
+	else:
+		raise ImportError("The Connection data file, specified by the " + \
+		"filepath parameter, is neither a .txt or .json file.")
+		exit(0)
 
-	if "server" not in connection_data_dict or "database" not in connection_data_dict:
+	if ("server" not in connection_data_dict) or \
+	("database" not in connection_data_dict):
 		raise ValueError(
-			"""Connection data file must contain server and database_name, formated like:
-			server = server_name
-			database = database_name\n""")
+			"Connection data file must contain server and database_name," + \"
+			"formated like: server = server_name database = database_name\n")
 		exit(0)
 
 	server = connection_data_dict["server"]
 	database = connection_data_dict["database"]
-	print("Server={}\nDatabase={}".format(server, database))
+	# print("Server={}\nDatabase={}".format(server, database))
 
 	return server, database
 
