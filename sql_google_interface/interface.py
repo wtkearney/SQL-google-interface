@@ -43,6 +43,7 @@ def read_connection_data_from_external_file(filepath, separator="="):
 	"""
 	with open(filepath, 'r') as f:
 		connection_data = f.readlines()
+		f.close()
 
 	connection_data_dict = dict()
 
