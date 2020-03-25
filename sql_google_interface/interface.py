@@ -105,7 +105,7 @@ def get_server_connection(server, database_name):
 			conn_info = 'DRIVER=SQL Server Native Client 11.0;'
 			conn_info += 'SERVER={};'.format(server)
 			conn_info += 'DABASE={};'.format(database_name)
-			 += 'Trusted_Connection=yes'
+			conn_info += 'Trusted_Connection=yes'
 			cnn = pyodbc.connect(conn_info)
 			# print("Connected with SQL Server Native Client 11.0.")
 		except pyodbc.Error as e2:
@@ -214,7 +214,7 @@ def get_data_from_server(server_connection, SQL_filepath):
 	with open(SQL_filepath, 'r') as f:
 		query = f.read()
 
-	print("Retrieving data from SQL server... ")
+	# print("Retrieving data from SQL server... ")
 	dataframe = pd.read_sql(query, server_connection)
 
 	for col in dataframe:
