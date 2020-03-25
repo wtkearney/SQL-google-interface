@@ -67,7 +67,8 @@ def read_connection_data_from_external_file(filepath, separator="="):
 
 def get_server_connection(server, database_name):
 	"""Tries to connect to the SQL database.
-	Attempts connection with driver SQL Server Native Client 10.0 and 11.0.
+	Attempts connection with driver SQL Server Native Client 10.0 and 11.0 and
+	a generic pyodbc sql server connection.
 
 	Arguments:
 		server -- the name of the server
@@ -77,24 +78,32 @@ def get_server_connection(server, database_name):
 	"""
 	cnn = False
 	try:
-		# make connection to GIS database
-		conn_info = 'DRIVER=SQL Server Native Client 10.0;' # ms sql server2008
-		conn_info = conn_info + 'SERVER={};'.format(server) # server name goes here
-		conn_info = conn_info + 'DATABASE_NAME={};'.format(database_name) # database name goes here
-		conn_info = conn_info + 'Trusted_Connection=yes' # use windows authentication
-		cnn = pyodbc.connect(conn_info)
-		print("Connected with SQL Server Native Client 10.0.")
+		# ms sql server2008
+		conn_info = 'DRIVER=SQL Server Native Client 10.0;'
+		conn_info += 'SERVER={};'.format(server)
+		conn_info += 'DABASE={};'.format(database_name)
+		conn_info += 'Trusted_Connection=yes'
+		# print("Connected with SQL Server Native Client 10.0.")
 	except pyodbc.Error as e1:
 		try:
-			conn_info = 'DRIVER=SQL Server Native Client 11.0;' # ms sql server2012
-			conn_info = conn_info + 'SERVER={};'.format(server) # server name goes here
-			conn_info = conn_info + 'DATABASE_NAME={};'.format(database_name) # database name goes here
-			conn_info = conn_info + 'Trusted_Connection=yes' # use windows authentication
+			 # ms sql server2012
+			conn_info = 'DRIVER=SQL Server Native Client 11.0;'
+			conn_info += 'SERVER={};'.format(server)
+			conn_info += 'DABASE={};'.format(database_name)
+			 += 'Trusted_Connection=yes'
 			cnn = pyodbc.connect(conn_info)
-			print("Connected with SQL Server Native Client 11.0.")
+			# print("Connected with SQL Server Native Client 11.0.")
 		except pyodbc.Error as e2:
-			print("Error: {}".format(e2))
-
+			try:
+				# generic sql server driver
+				conn_info = "Driver={SQL Server};"
+				conn_info += "SERVER={};".format(server)
+				conn_info += "DABASE={};".format(database_name)
+				conn_info += "Trusted_Connection=yes"
+				cnn = pyodbc.connect(conn_info)
+				# print("Connected with a generic SQL Server Driver")
+			except pyodbc.Error as e3:
+				raise e3
 	return cnn
 
 def get_credentials(client_secret_file=None, application_name="SQL-google-interface", stored_credentials_dir="C:/credentials/"):
@@ -203,7 +212,7 @@ def get_data_from_server(server_connection, SQL_filepath):
 	return dataframe
 
 def clean_dataframe(dataframe):
-	"""Type checks data in a pandas dataframe
+	"""Type checks data in a pandas dataframe using numpy's select method.
 
 	Arguments:
 		dataframe -- the dataframe to be cleaned
