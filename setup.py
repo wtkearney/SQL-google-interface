@@ -18,7 +18,8 @@ setuptools.setup(
         "pandas",
         "backoff",
         "google-api-python-client",
-        "oauth2client"],
+        "oauth2client",
+        "numpy"],
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
@@ -27,4 +28,3 @@ setuptools.setup(
     ],
     python_requires='>=3.5',
 )
-

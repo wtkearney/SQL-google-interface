@@ -61,10 +61,11 @@ All done! You are ready to run the basic tests.
 If you're interested, here is a list of package dependencies
 
 ```
-pyodbc
-pandas
 backoff
 google-api-python-client
+numpy
+pyodbc
+pandas
 ```
 
 ## Running the tests
