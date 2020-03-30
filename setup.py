@@ -5,14 +5,14 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="SQL-google-interface", # Replace with your own username
-    version="1.6",
+    version="1.7",
     author="William Kearney",
     author_email="wtkearney@gmail.com",
     description="An interface to interact between a SQL database and Google Drive folders",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/wtkearney/SQL-google-interface",
-    download_url = 'https://github.com/wtkearney/SQL-google-interface/archive/v1.6.tar.gz',
+    download_url = 'https://github.com/wtkearney/SQL-google-interface/archive/v1.7.tar.gz',
     install_requires=[
         "pyodbc",
         "pandas",
