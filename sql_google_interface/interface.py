@@ -63,15 +63,11 @@ def read_connection_data_from_external_file(filepath, separator="="):
 			connection_data_dict = json.load(f)
 			f.close()
 	else:
-		raise ImportError("The Connection data file, specified by the " + \
-		"filepath parameter, is neither a .txt or .json file.")
+		raise ImportError("The Connection data file, specified by the filepath parameter, is neither a .txt or .json file.")
 		exit(0)
 
-	if ("server" not in connection_data_dict) or \
-	("database" not in connection_data_dict):
-		raise ValueError(
-			"Connection data file must contain server and database_name," + \"
-			"formated like: server = server_name database = database_name\n")
+	if ("server" not in connection_data_dict) or ("database" not in connection_data_dict):
+		raise ValueError("Connection data file must contain server and database_name, formated like:\n\nserver = server_name\ndatabase = database_name\n")
 		exit(0)
 
 	server = connection_data_dict["server"]
