@@ -306,11 +306,31 @@ def get_files_from_drive(drive_service, name=None, substring_name=None, mime_typ
 		q = q + " and " + criterion
 
 	result_fields_string = ','.join(result_fields)
-	results = drive_service.files().list(q=q,
-		spaces='drive',
-		fields='nextPageToken, files({})'.format(result_fields_string)).execute()
 
-	return results.get('files', [])
+	result = []
+	page_token = None
+	while True:
+		try:
+			param = {}
+			if page_token:
+				files = drive_service.files().list(q=q,
+					spaces='drive',
+					pageToken=page_token,
+					fields='nextPageToken, files({})'.format(result_fields_string)).execute()
+			else:
+				files = drive_service.files().list(q=q,
+					spaces='drive',
+					fields='nextPageToken, files({})'.format(result_fields_string)).execute()
+
+			result.extend(files['files'])
+			page_token = files.get('nextPageToken')
+			if not page_token:
+				break
+		except HttpError as e:
+			print('An error occurred: {}'.format(a))
+			break
+
+	return result
 
 def create_permissions(drive_service, file_id):
 	"""
