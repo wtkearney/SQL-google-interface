@@ -203,7 +203,7 @@ def get_data_from_server(server_connection, SQL_filepath):
 		A pandas dataframe containing the requested data
 	"""
 	if not server_connection:
-		print("Error: {} server connection does not exist.".format(server))
+		print("Error: {} server connection does not exist.".format(server_connection))
 		return False
 
 	# get query strings from files
