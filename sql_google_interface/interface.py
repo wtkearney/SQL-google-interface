@@ -87,35 +87,30 @@ def get_server_connection(server, database_name):
 	Returns:
 		The connection object
 	"""
-	cnn = False
-	try:
-		# ms sql server2008
-		conn_info = 'DRIVER=SQL Server Native Client 10.0;'
-		conn_info += 'SERVER={};'.format(server)
-		conn_info += 'DABASE={};'.format(database_name)
-		conn_info += 'Trusted_Connection=yes'
-		# print("Connected with SQL Server Native Client 10.0.")
-	except pyodbc.Error as e1:
+
+	def try_connection(driver):
 		try:
-			 # ms sql server2012
-			conn_info = 'DRIVER=SQL Server Native Client 11.0;'
+			conn_info = 'DRIVER={};'.format(driver)
 			conn_info += 'SERVER={};'.format(server)
-			conn_info += 'DABASE={};'.format(database_name)
+			conn_info += 'DATABASE_NAME={};'.format(database_name)
 			conn_info += 'Trusted_Connection=yes'
 			cnn = pyodbc.connect(conn_info)
-			# print("Connected with SQL Server Native Client 11.0.")
-		except pyodbc.Error as e2:
-			try:
-				# generic sql server driver
-				conn_info = "Driver={SQL Server};"
-				conn_info += "SERVER={};".format(server)
-				conn_info += "DABASE={};".format(database_name)
-				conn_info += "Trusted_Connection=yes"
-				cnn = pyodbc.connect(conn_info)
-				# print("Connected with a generic SQL Server Driver")
-			except pyodbc.Error as e3:
-				raise e3
-	return cnn
+		except pyodbc.Error as e:
+			print("Error: {}".format(e))
+			return None
+		return cnn
+
+	driver_strings = ["SQL Server Native Client 10.0", "SQL Server Native Client 11.0", "{SQL Server}"]
+
+	cnn = None
+	for driver in driver_strings:
+		cnn = try_connection(driver)
+		if cnn:
+			print("Connected with {}".format(driver))
+			return cnn
+
+	print("Error, cannot connect to SQL server.")
+	exit()
 
 def get_credentials(client_secret_file=None, application_name="SQL-google-interface", stored_credentials_dir="C:/credentials/"):
 	"""Gets valid user credentials from storage.
@@ -233,27 +228,25 @@ def clean_dataframe(dataframe):
 
 	data = dataframe.copy().fillna("") # deal with the nulls first
 
-
 	for column in data.columns.to_list():
-	    con = [
+	    conditions = [
 	        (data[column].dtype == np.object),
 	        (data[column].dtype == np.int64),
 	        (
 	            (data[column].dtype == "<M8[ns]") |
 	            (data[column].dtype == np.datetime64) |
 	            (data[column].dtype == datetime.datetime) |
-	            (data[column].dtype == datetime.date) |
-	            (data[column].dtype == pd.tslib.Timestamp)
+	            (data[column].dtype == datetime.date)
 	        )
 	    ]
-	    choi = [
+	    choices = [
 	        data[column], # Python 3.x defaults to utf-8 so no need to force it
 	        data[column].astype(str), # Convert all int and float values to str
 			# convert any flavor of datetime object into a string containing
 			# only year, month, and day in the YYYY-mm-dd format
 	        data[column].dt.date.astype(str)
 	    ]
-	    data[column] = np.select(con, choi, "TYPE ERROR")
+	    data[column] = np.select(conditions, choices, "TYPE ERROR")
 
 	return data
 
@@ -340,23 +333,35 @@ def create_permissions(drive_service, file_id):
 	pass
 
 @backoff.on_exception(backoff.expo, HttpError, on_backoff=backoff_hdlr)
-def create_spreadsheet(drive_service, spreadsheet_name, parent_folder_list=None, can_share='false', custom_metadata=None):
-	"""Creates a spreadsheet.
+def create_file(drive_service, file_name, mime_type, parent_folder_list=None, can_share='false', custom_metadata=None):
+	"""Creates a file (note that foldors are treated the same as files)
 
 	Arguments:
 		drive_service -- a Google Drive service
-		spreadsheet_name -- the name of the spreadsheet
+		file_name -- the name of the file
+		mime_type -- must be 'folder', 'spreadsheet', or 'document'
 		parent_folder_list -- a list of parent IDs
 		can_share -- indicates whether users can share this file with others (default 'false')
 		custom_metadata -- a dictionary of key value pairs that allows you to create custom metadata. This might
 			make it easy to search for these files later, for example.
 	Returns:
-		The sheet ID of the new spreadsheet
+		The sheet ID of the new file
 	"""
+
+	if mime_type == "folder":
+		mime_type_api = 'application/vnd.google-apps.folder'
+	elif mime_type == "spreadsheet":
+		mime_type_api = 'application/vnd.google-apps.spreadsheet'
+	elif mime_type == "document":
+		mime_type_api = 'application/vnd.google-apps.document'
+	else:
+		raise ValueError("'mime_type' argument must be 'folder', 'spreadsheet', or 'document'")
+		exit(0)
+
 	# metadata for new spreadsheet
 	body = {
-		'name': spreadsheet_name,
-		'mimeType': 'application/vnd.google-apps.spreadsheet',
+		'name': file_name,
+		'mimeType': mime_type_api,
 		'copyRequiresWriterPermission' : 'false',	# changed from 'viewersCanCopyContent', which is now deprecated
 		'capabilities.canShare' : can_share,			# indicate whether users can share this file with others
 		'properties' : {}
@@ -372,9 +377,9 @@ def create_spreadsheet(drive_service, spreadsheet_name, parent_folder_list=None,
 	# create spreadsheet, get file id (for permissions)
 	# print("\tCreating spreadsheet: {}".format(spreadsheet_name))
 	file = drive_service.files().create(body=body, fields='id').execute()
-	sheet_id = file.get('id')
+	file_id = file.get('id')
 
-	return sheet_id
+	return file_id
 
 @backoff.on_exception(backoff.expo, HttpError, on_backoff=backoff_hdlr)
 def delete_drive_files_by_ID(drive_service, list_of_file_ids):
