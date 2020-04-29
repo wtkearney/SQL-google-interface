@@ -25,6 +25,11 @@ from oauth2client import client
 from oauth2client import tools
 from oauth2client import file
 
+try:
+	import argparse
+	flags = argparse.ArgumentParser(parents=[tools.argparser]).parse_args()
+except ImportError:
+	flags = None
 
 def read_connection_data_from_external_file(filepath, separator="="):
 	"""Reads SQL server connection information from an external file.
@@ -516,8 +521,4 @@ def insert_file_into_folder(drive_service, folder_id, file_id):
 	drive_service.files().update(fileId=file_id, addParents=folder_id, fields='id, parents').execute()
 
 if __name__ == '__main__':
-	try:
-		import argparse
-		flags = argparse.ArgumentParser(parents=[tools.argparser]).parse_args()
-	except ImportError:
-		flags = None
+	main()
