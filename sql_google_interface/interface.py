@@ -275,7 +275,7 @@ def get_files_from_drive(drive_service, name=None, substring_name=None, mime_typ
 		if mime_type == "folder":
 			query_list.append("mimeType = 'application/vnd.google-apps.folder'")
 		elif mime_type == "file":
-			query_list.append("mimeType = 'application/vnd.google-apps.file")
+			query_list.append("mimeType = 'application/vnd.google-apps.file'")
 		else:
 			raise ValueError("'mime_type' argument must be 'folder' or 'file'.")
 			exit(0)
@@ -320,7 +320,7 @@ def get_files_from_drive(drive_service, name=None, substring_name=None, mime_typ
 			if not page_token:
 				break
 		except HttpError as e:
-			print('An error occurred: {}'.format(a))
+			print('An error occurred: {}'.format(e))
 			break
 
 	return result
