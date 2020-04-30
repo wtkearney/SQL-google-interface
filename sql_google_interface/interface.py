@@ -94,18 +94,20 @@ def get_server_connection(server, database_name):
 	"""
 
 	def try_connection(driver):
+		print("Trying driver {}".format(driver))
 		try:
 			conn_info = 'DRIVER={};'.format(driver)
 			conn_info += 'SERVER={};'.format(server)
 			conn_info += 'DATABASE_NAME={};'.format(database_name)
 			conn_info += 'Trusted_Connection=yes'
 			cnn = pyodbc.connect(conn_info)
-		except pyodbc.Error as e:
-			print("Error: {}".format(e))
+		except Exception as e:
+			print(e)
+			print("\n")
 			return None
 		return cnn
 
-	driver_strings = ["SQL Server Native Client 10.0", "SQL Server Native Client 11.0", "{SQL Server}"]
+	driver_strings = ["{SQL Server}", "SQL Server Native Client 10.0", "SQL Server Native Client 11.0"]
 
 	cnn = None
 	for driver in driver_strings:
