@@ -113,7 +113,7 @@ def get_server_connection(server, database_name):
 	for driver in driver_strings:
 		cnn = try_connection(driver)
 		if cnn:
-			print("Connected with {}".format(driver))
+			print("Connected with {}\n".format(driver), flush=True)
 			return cnn
 
 	print("Error, cannot connect to SQL server.")
